@@ -2,7 +2,7 @@ import pygame
 from constants import *
 from random import randint
 from physics import *
-
+from numpy import random as random_numpy
 
 class GameObject():
   """
@@ -158,7 +158,7 @@ class Ball(GameObject):
     spawn_range_x = (GAME_WIDTH//4,(GAME_WIDTH*3)//4)
     spawn_x = randint(*spawn_range_x)
     spawn_y = (GAME_HEIGHT)//3
-    self.replace( spawn_x , spawn_y)
+    self.replace(spawn_x , spawn_y)
 
   def update(self):
     if self.left < 0 or self.right > GAME_WIDTH:
@@ -180,7 +180,58 @@ class Ball(GameObject):
 
 # Brick object, not currently in use
 class Brick(GameObject):
-  def __init__(self, x, y, width, height, resistance = 1, color = (150,150,150)):
+  COLOR_PALETTE : dict [int, tuple[int, int, int]] = {
+    0: (200,200,200),
+    1: (255,0,0),
+    2: (0,255,0),
+    3: (0,0,255),
+    4: (255,255,0),
+    5: (0,255,255),
+    6: (255,0,255)
+  }
+  BRICK_WIDTH = 40
+  BRICK_HEIGHT = 20
+  def __init__(self, x, y, width, height, resistance = 1, color_id = 0):
     super().__init__(x, y, width, height)  
     self.resistance = resistance
-    self.color = color
+    self.color = Brick.COLOR_PALETTE[color_id]
+    self.active = True
+    if color_id == 0:
+      self.active = False
+  
+  def render(self, gameDisplay) -> None:
+    if self.active:
+      #Draws the squares for each block filled with the given color's value
+      pygame.draw.rect(gameDisplay, self.color, self.get_render_rect() )
+      #Draws the square's outline with the value 0 of the palette
+      pygame.draw.rect(gameDisplay, self.COLOR_PALETTE[0], self.get_render_rect(), 1)
+
+
+class Wall:
+  BRICKS_PER_ROW = 16
+  WALL_ROWS = 5
+  
+  def __init__(self):
+    self.brick_list : list[Brick] = []
+    if  (GAME_WIDTH % Wall.BRICKS_PER_ROW) > 0:
+      print("The amount of bricks don't fit in the screen width")
+      exit()
+    if ( Brick.BRICK_WIDTH % 2) > 0:
+      print("The amount of bricks don't fit in the screen height")
+      exit()
+    
+    self.create_bricks()
+
+  def create_bricks(self) -> None:
+    color_id : int
+    temp_brick : Brick
+
+    temp_matrix =  random_numpy.randint(0,4,(Wall.WALL_ROWS,Wall.BRICKS_PER_ROW))
+    for i,row in enumerate(temp_matrix):
+      for j,color_id in enumerate(row):
+        temp_brick = Brick(Brick.BRICK_WIDTH * j, Brick.BRICK_HEIGHT * i, Brick.BRICK_WIDTH, Brick.BRICK_HEIGHT, 1, color_id)      
+        self.brick_list.append(temp_brick)
+
+  def render(self, gameDisplay) -> None:
+    for temp_rect in self.brick_list:
+      temp_rect.render(gameDisplay)

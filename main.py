@@ -1,37 +1,64 @@
+import gymnasium as gym
+from gymnasium import spaces
+from gymnasium.utils import seeding
 
 import sys, pygame, random
 from random import *
 from game_objects import *
 from constants import *
 from physics import *
-from numpy import random as random_numpy
+
 
 pygame.init()
 
-class Game:
-  def __init__(self):
+class Game(gym.Env):
+  def __init__(self, human=False, env_info={'state_space':None}):
+    super().__init__()
+
+    self.done = False
+    self.seed()
+    self.reward = 0
+    self.action_space = 4
+    self.state_space = 12
+
+    self.total, self.maximum = 0, 0
+    self.human = human
+    self.env_info = env_info
+
     self.clock = pygame.time.Clock()
     self.clock_counter = GAME_FPS-1
     self.gameDisplay = pygame.display.set_mode(DISPLAY_SIZE)
-    self.game_paused = False
+    self.game_paused : bool = False
     pygame.mouse.set_visible(self.game_paused)       # turn off mouse pointer
-    self.crash = False
+    self.crash : bool = False
     self.player = Player()
     self.ball = Ball()
-    self.score =  0
+    self.score : int = 0
     self.wall = Wall()
-    self.lives = STARTING_LIVES
+    self.lives : int = STARTING_LIVES
     
+    # distance between ball and player
+    self.prev_dist : int
+    self.dist : int = self.player.get_center()[0] - self.ball.get_center()[0]
+
+  def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+  def measure_distance(self):
+    self.prev_dist = self.dist
+    self.dist = self.player.get_center[0] - self.ball.get_center[0]
 
   def update(self):
 
     if Collide(self.ball.sides, self.player.sides):
       ball_player_collision(self.ball, self.player)
 
-    collided_brick_i = collide_list(self.ball, self.wall.brick_list, self.wall.brick_width, self.wall.brick_height)
+    collided_brick_i = get_collided_brick(self.ball, self.wall.brick_list)
     if collided_brick_i != -1:
-      ball_brick_collision(self.ball, self.wall.brick_list[collided_brick_i], self.wall.brick_width, self.wall.brick_height)
-      self.wall.brick_list.pop(collided_brick_i)
+      ball_brick_collision(self.ball, self.wall.brick_list[collided_brick_i])
+      self.wall.brick_list[collided_brick_i].active = False
+      self.score += 10
     
     if self.ball.update():
       self.lives -= 1
@@ -40,7 +67,22 @@ class Game:
       elif self.lives == -1:
         self.game_paused = True
 
+  def reset_game(self):  
+    self.ball.spawn() #Spawn ball before assigning lives 
+    self.lives = STARTING_LIVES  
+    self.player = Player()
+    self.wall = Wall()
+    self.score = 0
+    self.reward = 0
+    self.done = False
+    state = self.get_state()
 
+    return state
+
+
+  def get_state(self):
+    wall_state = []
+    
 
   def main(self):
     update_render_ratio = 3 #How many times the values are updated before rendering
@@ -57,8 +99,8 @@ class Game:
               self.game_paused = not (self.game_paused)
               pygame.mouse.set_visible(self.game_paused) 
               if self.lives < 0: #If lost, press ESC to restart
-                self.ball.spawn() #Spawn ball before assigning lives 
-                self.lives = STARTING_LIVES  
+                print("Score:", self.score)
+                self.reset_game()
       
       if not self.game_paused:
         keys = pygame.key.get_pressed()  #checking pressed keys
@@ -95,47 +137,6 @@ class Game:
 
     pygame.display.flip()
     
-
-class Wall:
-  bricks_per_row = 16
-  brick_width = GAME_WIDTH // bricks_per_row
-  brick_height = brick_width // 2
-  color_palette = {
-    0: (200,200,200),
-    1: (255,0,0),
-    2: (0,255,0),
-    3: (0,0,255),
-    4: (255,255,0),
-    5: (0,255,255),
-    6: (255,0,255)
-  }
-  def __init__(self):
-    self.brick_list = []
-    if  (GAME_WIDTH % Wall.bricks_per_row) > 0:
-      print("The amount of bricks don't fit in the screen width")
-      exit()
-    if ( Wall.brick_width % 2) > 0:
-      print("The amount of bricks don't fit in the screen height")
-      exit()
-    
-    self.create_bricks()
-
-  def create_bricks(self):
-    temp_matrix =  random_numpy.randint(0,4,(5,Wall.bricks_per_row))
-
-    for i,row in enumerate(temp_matrix):
-      for j,e in enumerate(row):
-        if e != 0:
-          temp_rect = (Wall.brick_width * j, Wall.brick_height * i, e)          
-          self.brick_list.append(temp_rect)
-
-  def render(self, gameDisplay):
-    for temp_rect in self.brick_list:
-      #Draws the squares for each block filled with the given color's value
-      pygame.draw.rect(gameDisplay, Wall.color_palette[temp_rect[2]],pygame.Rect(temp_rect[0] , temp_rect[1], Wall.brick_width, Wall.brick_height ) )
-      #Draws the square's outline with the value 0 of the palette
-      pygame.draw.rect(gameDisplay, Wall.color_palette[0],pygame.Rect(temp_rect[0] , temp_rect[1], Wall.brick_width, Wall.brick_height ) , 1)
-
 
 
 if __name__ == "__main__":

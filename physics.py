@@ -1,5 +1,8 @@
-
+from __future__ import annotations
 import pygame
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+  from game_objects import GameObject, Ball, Brick
 from constants import *
 
 sign = lambda x: (1, -1)[x < 0]
@@ -46,22 +49,23 @@ def ball_player_collision(ball, player):
   ball.speed_x = (offset_normalized * ball.MAX_SPEED)
 
 
-def collide_list(GameObjectA, GameObjectList, brick_width, brick_height):
-  for i,cur in enumerate(GameObjectList):
-    if Collide(GameObjectA.sides, (cur[0],cur[1],cur[0] + brick_width,cur[1] + brick_height)):
+def get_collided_brick(GameObjectA : GameObject, brick_list : list[Brick]) -> int:
+  current_brick : 'Brick'
+  for i, current_brick in enumerate(brick_list):
+    if current_brick.active and Collide(GameObjectA.sides, current_brick.sides):
       return i
   return -1
 
 
-def ball_brick_collision(ball, brickRect, brick_width, brick_height):
+def ball_brick_collision(ball : Ball, brick : Brick):
   if ball.speed_x == 0:
     ball.speed_y = -ball.speed_y
   else:
-    if abs(ball.bottom - brickRect[1]) < COLLISION_TOL or \
-      abs(ball.top - (brickRect[1] + brick_height)) < COLLISION_TOL:
+    if abs(ball.bottom - brick.top) < COLLISION_TOL or \
+      abs(ball.top - (brick.bottom)) < COLLISION_TOL:
       ball.speed_y = -ball.speed_y
-    elif abs(ball.left - (brickRect[0] + brick_width)) < COLLISION_TOL or \
-      abs(ball.right - brickRect[0]) < COLLISION_TOL:
+    elif abs(ball.left - (brick.right)) < COLLISION_TOL or \
+      abs(ball.right - brick.left) < COLLISION_TOL:
       ball.speed_x = -ball.speed_x
     
   
