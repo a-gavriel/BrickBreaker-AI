@@ -45,7 +45,7 @@ def ball_player_collision(ball, player):
   temp_rect = ( player.left - ball.width, player.top, \
       player.width + 2* ball.width, player.height )
   offset = ball.get_center()[0] - (temp_rect[0] + temp_rect[2]/2)
-  offset_normalized = offset / (temp_rect[2]/2)
+  offset_normalized = offset / (temp_rect[2]/2.5)
   ball.speed_x = (offset_normalized * ball.MAX_SPEED)
 
 

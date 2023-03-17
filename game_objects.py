@@ -62,9 +62,9 @@ class GameObject():
     self.bottom = self.y + self.height
     self.sides = (self.left, self.top, self.right, self.bottom) 
 
-  def get_center(self):
+  def get_center(self) -> tuple[float, float]:
     """
-    Returns a tuple with  (center_x , center_y)
+    Returns a float tuple with  (center_x , center_y)
     """
     return self.left + (self.width/2) , self.top + (self.height/2)
     
@@ -118,7 +118,7 @@ class Player(GameObject):
     self.width = GAME_WIDTH//10
     self.height = self.width//5
     self.x = GAME_WIDTH//2 - self.width//2
-    self.y = (7*GAME_HEIGHT)//8
+    self.y = GAME_HEIGHT - (2*self.height)
     self.speedx = INITIAL_PLYR_SPEED
     self.speedy = 0   
   def update(self, action):    
@@ -135,32 +135,46 @@ class Ball(GameObject):
   """
   Ball Game Object, can bounce. Starts without moving.
   """
-  def __init__(self):
+  def __init__(self, human : bool):
     super().__init__()
     self.img = pygame.image.load("ball-3.png").convert_alpha()
     img_scale = DISPLAY_SCALE / 4 #The image fits when scale = 4
     temp_rect = self.img.get_rect() #Get the size of the image
     self.img = pygame.transform.scale(self.img, (int(temp_rect.width * img_scale), int(temp_rect.height * img_scale))) #Resize image to the given Display Scale
     self.load_rect( self.img.get_rect() ) # Load the rectangle from the image
-    self.spawn()
-    self.speed_x = 0
-    self.speed_y = 0
+    self.speed_x : float = 0.0
+    self.speed_y : float = 0.0
     self.MAX_SPEED = 1 + DISPLAY_SCALE//2
-
+    self.acceleration_counter : int = 0
+    self.human : bool = human
+    if not self.human:
+      self.start_ball()
+    self.spawn()
+    
   def start_ball(self):
     if (self.speed_x == 0) and (self.speed_y == 0):
       self.speed_x = 0
-      self.speed_y = INITIAL_BALL_SPEED
+      self.speed_y = INITIAL_BALL_SPEED / 10
 
   def spawn(self):
     self.speed_x = 0
     self.speed_y = 0
-    spawn_range_x = (GAME_WIDTH//4,(GAME_WIDTH*3)//4)
+    spawn_range_x = (GAME_WIDTH//4,(GAME_WIDTH*4)//5)
     spawn_x = randint(*spawn_range_x)
     spawn_y = (GAME_HEIGHT)//3
     self.replace(spawn_x , spawn_y)
+    if not self.human:
+      self.start_ball()
 
   def update(self):
+    if INITIAL_BALL_SPEED / 10 <= abs(self.speed_y) < INITIAL_BALL_SPEED:
+        self.acceleration_counter += 1
+        if (self.acceleration_counter % 30) == 0:
+          self.acceleration_counter = 0
+          self.speed_y += INITIAL_BALL_SPEED / 10
+    if self.speed_y > INITIAL_BALL_SPEED:
+        self.speed_y = INITIAL_BALL_SPEED
+
     if self.left < 0 or self.right > GAME_WIDTH:
       self.speed_x = -self.speed_x
     if self.top < 0:
